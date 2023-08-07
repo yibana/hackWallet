@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -124,8 +125,39 @@ func GetNextBlockBaseFee(header *types.Header) (*big.Int, error) {
 		nextBaseFee = new(big.Int).Div(nextBaseFee, big.NewInt(1000*1000*100))
 	}
 
-	nextBaseFee = big.NewInt(0).Add(nextBaseFee, big.NewInt(1e8)) // 加0.1gwei 防止不够
+	//nextBaseFee = big.NewInt(0).Add(nextBaseFee, big.NewInt(1e8)) // 加0.1gwei 防止不够
 	return nextBaseFee, nil
+}
+
+func FillBase64(src string) string {
+	if m := len(src) % 4; m != 0 {
+		src += strings.Repeat("=", 4-m)
+	}
+	return src
+}
+
+func StringtoBigInt_without_fail(s string) *big.Int {
+	b := big.Int{}
+	r, err := b.SetString(s, 10)
+	if !err {
+		return big.NewInt(0)
+	}
+	return r
+}
+
+func StringtoBigFloat_without_fail(s string) *big.Float {
+	b := big.Float{}
+	r, err := b.SetString(s)
+	if err != err {
+		return big.NewFloat(0)
+	}
+	return r
+}
+
+func BytesBigInt_without_fail(data []byte) (r *big.Int) {
+	b := big.Int{}
+	r = b.SetBytes(data)
+	return
 }
 
 func ToGwei(wei *big.Int) *big.Int {
@@ -133,4 +165,36 @@ func ToGwei(wei *big.Int) *big.Int {
 }
 func ToGweiFloat(wei *big.Int) float64 {
 	return float64(new(big.Int).Div(wei, big.NewInt(10000)).Int64()) / 100000
+}
+
+// 将小数值的以太币单位转换成大整数类型
+func ConvertETHToBigInt(eth float64) *big.Int {
+	bigInt := big.NewInt(int64(eth * 1e8))
+	return big.NewInt(0).Mul(bigInt, big.NewInt(1e10))
+}
+
+func ConvertETHStrToBigInt(eth string) *big.Int {
+	v, _ := strconv.ParseFloat(eth, 64)
+	return ConvertETHToBigInt(v)
+}
+
+func ConvertWei2Eth(wei *big.Int) float64 {
+	if wei == nil {
+		return 0
+	}
+	_b := big.NewInt(0).Div(wei, big.NewInt(1e10))
+	return float64(_b.Int64()) / 1e8
+}
+func ConvertWeiStr2Eth(wei string) float64 {
+	v, _ := new(big.Int).SetString(wei, 10)
+	_b := big.NewInt(0).Div(v, big.NewInt(1e10))
+	return float64(_b.Int64()) / 1e8
+}
+func ConvertBigNumberHex2BigInt(h string) *big.Int {
+	n := new(big.Int)
+	if strings.HasPrefix(h, "0x") {
+		h = h[2:]
+	}
+	n.SetString(h, 16)
+	return n
 }
