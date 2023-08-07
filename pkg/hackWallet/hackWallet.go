@@ -198,17 +198,21 @@ func (hw *HackWallet) SendBatchTransaction(transactions []*types.Transaction) er
 	return nil
 }
 
-func (hw *HackWallet) SendBundleFrom(transactions []*types.Transaction, attempts int64) error {
+func (hw *HackWallet) SendBundleFrom(transactions []*types.Transaction, blockNum uint64, attempts int64) error {
 	if len(hw.fbs) == 0 {
 		return errors.New("flashbot not init")
 	}
 	if attempts <= 0 {
 		attempts = 1
 	}
-	targetBlockNumber, err := hw.GetBlockNumber()
-	if err != nil {
-		return err
+	var err error
+	if blockNum <= 0 {
+		blockNum, err = hw.GetBlockNumber()
+		if err != nil {
+			return err
+		}
 	}
+
 	txs := []string{}
 	for _, transaction := range transactions {
 		data, err := transaction.MarshalBinary()
@@ -218,8 +222,8 @@ func (hw *HackWallet) SendBundleFrom(transactions []*types.Transaction, attempts
 		txs = append(txs, hexutil.Encode(data))
 	}
 	for i := int64(0); i < attempts; i++ {
-		targetBlockNumber++
-		if err := hw.SendBundle(txs, targetBlockNumber); err != nil {
+		blockNum++
+		if err := hw.SendBundle(txs, blockNum); err != nil {
 			return err
 		}
 	}
@@ -237,12 +241,12 @@ func (hw *HackWallet) SendBundle(txs []string, blockNum uint64) error {
 	for _, fb := range hw.fbs {
 		response, err = fb.SendBundle(ctx, txs, blockNum)
 		if err != nil {
-			ErrLog(fmt.Sprintf("[SendBundle] rpc:%s err:%s", fb.Api().URL, err.Error()))
+			ErrLog(fmt.Sprintf("[SendBundle] blockNum:%d rpc:%s err:%s", blockNum, fb.Api().URL, err.Error()))
 		} else {
 			if response.Error.Code != 0 {
-				ErrLog(fmt.Sprintf("[SendBundle] rpc:%s err:%v", fb.Api().URL, response.Error))
+				ErrLog(fmt.Sprintf("[SendBundle] blockNum:%d rpc:%s err:%v", blockNum, fb.Api().URL, response.Error))
 			} else {
-				InfoLog(fmt.Sprintf("[SendBundle] rpc:%s result:%v", fb.Api().URL, response.Result))
+				InfoLog(fmt.Sprintf("[SendBundle] blockNum:%d rpc:%s result:%v", blockNum, fb.Api().URL, response.Result))
 				succ = true
 			}
 		}

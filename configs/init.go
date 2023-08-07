@@ -4,9 +4,11 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/yibana/hackWallet/internal/logger"
 	"os"
+	"path"
 )
 
 var (
+	ROOT = ""
 	// load .env file first
 	_ = loadEnv()
 
@@ -18,7 +20,7 @@ var (
 	LOG_FILE  = GetEnvWithDefault("LOG_FILE", "default")
 	LOG_LEVEL = GetEnvWithDefault("LOG_LEVEL", "debug")
 
-	LOGGER = logger.NewLogger(LOG_DIR, LOG_FILE, LOG_LEVEL)
+	LOGGER = logger.NewLogger(path.Join(ROOT, LOG_DIR), LOG_FILE, LOG_LEVEL)
 )
 
 func GetEnvWithDefault(key, defaultValue string) string {
@@ -31,12 +33,13 @@ func GetEnvWithDefault(key, defaultValue string) string {
 
 func loadEnv() error {
 	var errs []error
-	for _, f := range []string{".env", "../.env", "../../.env"} {
-		err := godotenv.Load(f)
+	for _, f := range []string{"", "../", "../../"} {
+		err := godotenv.Load(path.Join(f, ".env"))
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
+		ROOT = f
 		return nil
 	}
 	if len(errs) > 0 {

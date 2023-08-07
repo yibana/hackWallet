@@ -16,9 +16,9 @@
   * 核心包
 
 ### `examples` 目录
-* [BatchTransaction](examples/BatchTransaction/main.go)
-* [CallBundle](examples/CallBundle/main.go)
-* [Transfer](examples/Transfer/main.go)
+* [BatchTransaction](examples/BatchTransaction/main.go) 批量执行交易
+* [CallBundle](examples/CallBundle/main.go) 打包交易(flashbot)
+* [Transfer](examples/Transfer/main.go) 发送交易
 
 ### AnvilFork 选项
 [anvil](https://github.com/foundry-rs/foundry) 运行本地分叉节点，这样就可以创建主网的分叉环境然后模拟交易,anvil会创建10个有10000ETH的虚拟钱包地址
@@ -27,7 +27,9 @@ AnvilFork := true
 Wallet, _ = hackWallet.NewHackWallet(configs.HTTP_RPC_URL, AnvilFork)
 for i, account := range Wallet.Accounts {
 	balance, _ := account.GetBalance()
-	fmt.Printf("[%d]acc:%s balance:%f\n", i+1, account.Address.String(), hackWallet.ConvertWei2Eth(balance))
+	fmt.Printf("[%d]acc:%s balance:%f\n", 
+		i+1, account.Address.String(), 
+		hackWallet.ConvertWei2Eth(balance))
 }
 ```
 ```shell

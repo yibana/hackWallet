@@ -24,7 +24,7 @@ func init() {
 func TestPrintAccountsBalance(t *testing.T) {
 	for i, account := range Wallet.Accounts {
 		balance, _ := account.GetBalance()
-		fmt.Printf("[%d]acc:%s balance:%f\n", i+1, account.Address.String(), hackWallet.ConvertWei2Eth(balance))
+		hackWallet.DebugLog(fmt.Sprintf("[%d]acc:%s balance:%f\n", i+1, account.Address.String(), hackWallet.ConvertWei2Eth(balance)))
 	}
 }
 
