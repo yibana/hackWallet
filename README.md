@@ -11,7 +11,7 @@
 
 ### `pkg` 目录
 * `flashbot`
-  * [https://github.com/cryptoriums/flashbot/blob/main/flashbot.go#L314](https://github.com/cryptoriums/flashbot/blob/main/flashbot.go#L314)
+  * [https://github.com/cryptoriums/flashbot/blob/main/flashbot.go](https://github.com/cryptoriums/flashbot/blob/main/flashbot.go)
 * `hackWallet`
   * 核心包
 
