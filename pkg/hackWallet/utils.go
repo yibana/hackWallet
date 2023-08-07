@@ -161,10 +161,10 @@ func BytesBigInt_without_fail(data []byte) (r *big.Int) {
 	return
 }
 
-func ToGwei(wei *big.Int) *big.Int {
+func ConvertToGwei(wei *big.Int) *big.Int {
 	return new(big.Int).Div(wei, big.NewInt(1000000000))
 }
-func ToGweiFloat(wei *big.Int) float64 {
+func ConvertToGweiFloat(wei *big.Int) float64 {
 	return float64(new(big.Int).Div(wei, big.NewInt(10000)).Int64()) / 100000
 }
 

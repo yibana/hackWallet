@@ -2,14 +2,19 @@ package hackWallet
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
+	"github.com/yibana/hackWallet/pkg/flashbot"
 	"math/big"
 	"time"
 )
+
+const DefaultGasTipCap = 1e8 //0.1 Gwei
 
 type HackWallet struct {
 	Accounts             []*Account
@@ -18,6 +23,8 @@ type HackWallet struct {
 	lastBlockHeader      *types.Header
 	lastBlockHeader_time uint64
 	chainID              *big.Int
+	defaultGasTipCap     *big.Int
+	fbs                  []flashbot.Flashboter
 }
 
 func NewHackWallet(rpcUrl string, AnvilFork bool) (*HackWallet, error) {
@@ -48,11 +55,43 @@ func NewHackWallet(rpcUrl string, AnvilFork bool) (*HackWallet, error) {
 	}
 
 	return &HackWallet{
-		Accounts:    accounts,
-		RPCClient:   client,
-		ProviderURL: rpcUrl,
-		chainID:     chainID,
+		Accounts:         accounts,
+		RPCClient:        client,
+		ProviderURL:      rpcUrl,
+		chainID:          chainID,
+		defaultGasTipCap: big.NewInt(DefaultGasTipCap),
 	}, nil
+}
+
+// init default flashbot
+func (hw *HackWallet) InitFlashbot(prvKey *ecdsa.PrivateKey, additional bool) error {
+	rpcList := []string{"https://rpc.lightspeedbuilder.info",
+		"https://rpc.beaverbuild.org", "https://builder0x69.io", "https://eth-builder.com",
+		"https://buildai.net", "https://builder.gmbit.co/rpc", "https://rsync-builder.xyz",
+		"https://rpc.lightspeedbuilder.info", "https://rpc.payload.de",
+		"https://api.blocknative.com/v1/auction", "https://rpc.titanbuilder.xyz", "https://rpc.nfactorial.xyz"}
+
+	var additionals []*flashbot.Api
+	for _, s := range rpcList {
+		additionals = append(additionals, &flashbot.Api{
+			URL:                s,
+			SupportsSimulation: false,
+		})
+	}
+
+	if len(hw.fbs) == 0 {
+		flashboters, err := flashbot.NewAll(hw.chainID.Int64(), prvKey, additionals...)
+		if err != nil {
+			return err
+		}
+		hw.fbs = flashboters
+	}
+	return nil
+}
+
+// set defaultGasTipCap
+func (hw *HackWallet) SetDefaultGasTipCap(gasTipCap int64) {
+	hw.defaultGasTipCap = big.NewInt(gasTipCap)
 }
 
 func (hw *HackWallet) AddAccount(account *Account) {
@@ -60,13 +99,13 @@ func (hw *HackWallet) AddAccount(account *Account) {
 }
 
 // add rand account
-func (hw *HackWallet) AddRandAccount() error {
+func (hw *HackWallet) AddRandAccount() (*Account, error) {
 	account, err := RandAccount(hw.RPCClient)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	hw.AddAccount(account)
-	return nil
+	return account, nil
 }
 
 // get blocknumber
@@ -122,9 +161,131 @@ func (hw *HackWallet) SelectAccount(address common.Address) (*Account, error) {
 	return nil, errors.New("account not found in wallet")
 }
 
+type BuildBack func(from *Account, baseFee *big.Int, nonce uint64) (*types.Transaction, error)
+
+// BuildBatchTransaction
+func (hw *HackWallet) BuildBatchTransaction(fromAcc *Account, bc ...BuildBack) ([]*types.Transaction, error) {
+	var transactions []*types.Transaction
+	var err error
+	var nonce uint64
+	var baseFee *big.Int
+
+	baseFee, err = hw.GetNextBlockBaseFee()
+	if err != nil {
+		return nil, err
+	}
+	nonce, err = fromAcc.ethclient.PendingNonceAt(context.Background(), *fromAcc.Address)
+	if err != nil {
+		return nil, err
+	}
+	for _, b := range bc {
+		transaction, err := b(fromAcc, baseFee, nonce)
+		if err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, transaction)
+		nonce++
+	}
+	return transactions, nil
+}
+
+func (hw *HackWallet) SendBatchTransaction(transactions []*types.Transaction) error {
+	for _, transaction := range transactions {
+		if err := SendTransaction(hw.RPCClient, transaction); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (hw *HackWallet) SendBundleFrom(transactions []*types.Transaction, attempts int64) error {
+	if len(hw.fbs) == 0 {
+		return errors.New("flashbot not init")
+	}
+	if attempts <= 0 {
+		attempts = 1
+	}
+	targetBlockNumber, err := hw.GetBlockNumber()
+	if err != nil {
+		return err
+	}
+	txs := []string{}
+	for _, transaction := range transactions {
+		data, err := transaction.MarshalBinary()
+		if err != nil {
+			return err
+		}
+		txs = append(txs, hexutil.Encode(data))
+	}
+	for i := int64(0); i < attempts; i++ {
+		targetBlockNumber++
+		if err := hw.SendBundle(txs, targetBlockNumber); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (hw *HackWallet) SendBundle(txs []string, blockNum uint64) error {
+	if len(hw.fbs) == 0 {
+		return errors.New("flashbot not init")
+	}
+	ctx := context.Background()
+	var err error
+	var response *flashbot.Response
+	var succ bool
+	for _, fb := range hw.fbs {
+		response, err = fb.SendBundle(ctx, txs, blockNum)
+		if err != nil {
+			ErrLog(fmt.Sprintf("[SendBundle] rpc:%s err:%s", fb.Api().URL, err.Error()))
+		} else {
+			if response.Error.Code != 0 {
+				ErrLog(fmt.Sprintf("[SendBundle] rpc:%s err:%v", fb.Api().URL, response.Error))
+			} else {
+				InfoLog(fmt.Sprintf("[SendBundle] rpc:%s result:%v", fb.Api().URL, response.Result))
+				succ = true
+			}
+		}
+	}
+	if !succ {
+		return errors.New("send bundle failed")
+	}
+	return nil
+}
+
+func (hw *HackWallet) CallBundle(transactions []*types.Transaction, blockNumState uint64) (*flashbot.Response, error) {
+	if len(hw.fbs) == 0 {
+		return nil, errors.New("flashbot not init")
+	}
+
+	txs := []string{}
+	for _, transaction := range transactions {
+		data, err := transaction.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		txs = append(txs, hexutil.Encode(data))
+	}
+	ctx := context.Background()
+	var err error
+	var response *flashbot.Response
+	fb := hw.fbs[0]
+	response, err = fb.CallBundle(ctx, txs, blockNumState)
+	if err != nil {
+		ErrLog(fmt.Sprintf("[CallBundle] rpc:%s err:%s", fb.Api().URL, err.Error()))
+	} else {
+		if response.Error.Code != 0 {
+			ErrLog(fmt.Sprintf("[CallBundle] rpc:%s err:%v", fb.Api().URL, response.Error))
+		} else {
+			InfoLog(fmt.Sprintf("[CallBundle] rpc:%s result:%v", fb.Api().URL, response.Result))
+		}
+	}
+	return response, err
+}
+
 // BuildTransaction from,to,value,gas,gasPrice,nonce
 func (hw *HackWallet) BuildTransaction(
-	fromAcc *Account, to common.Address, data []byte,
+	fromAcc *Account, to *common.Address, data []byte,
 	value *big.Int, gasLimit, nonce uint64,
 	GasTipCap *big.Int, // 小费
 ) (*types.Transaction, error) {
@@ -134,15 +295,34 @@ func (hw *HackWallet) BuildTransaction(
 		return nil, err
 	}
 	GasFeeCap := big.NewInt(0).Add(baseFee, GasTipCap) // 计算最大支出手续费（矿工费）
-	return fromAcc.BuildTransaction(&to, value, data, nonce, gasLimit, hw.chainID,
+	return fromAcc.BuildTransaction(to, value, data, nonce, gasLimit, hw.chainID,
 		GasFeeCap, GasTipCap)
 }
 
 func (hw *HackWallet) GetTokenBalance(fromAcc *Account, TokenAddress common.Address) (*big.Int, error) {
-	return fromAcc.GetTokenBalance(TokenAddress)
+	return GetTokenBalance(hw.RPCClient, fromAcc.GetAddress(), TokenAddress)
 }
 
 // WaitForTx
-func (hw *HackWallet) WaitForTx(fromAcc *Account, tx *types.Transaction, maxWaitSeconds uint) (*types.Receipt, error) {
-	return fromAcc.WaitForTx(tx, maxWaitSeconds)
+func (hw *HackWallet) WaitForTx(tx *types.Transaction, maxWaitSeconds uint) (*types.Receipt, error) {
+	return WaitForTx(hw.RPCClient, tx, maxWaitSeconds)
+}
+
+// BuildTransfer
+func (hw *HackWallet) BuildTransfer(fromAcc *Account, to *common.Address, value, gasTipCap *big.Int, nonce uint64) (*types.Transaction, error) {
+	return hw.BuildTransaction(fromAcc, to, nil, value, 21000, nonce, gasTipCap)
+}
+
+// Transfer
+func (hw *HackWallet) Transfer(fromAcc *Account, to *common.Address, value *big.Int) (*types.Transaction, error) {
+	transaction, err := hw.BuildTransfer(fromAcc, to, value, hw.defaultGasTipCap, 0)
+	if err != nil {
+		return nil, err
+	}
+	return transaction, fromAcc.SendTransaction(transaction)
+}
+
+// SimulationActionFrom
+func (hw *HackWallet) SimulationActionFrom(from, to common.Address, value *big.Int, data []byte) (gas uint64, err error) {
+	return SimulationActionFrom(hw.RPCClient, from, to, value, data)
 }

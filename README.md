@@ -3,7 +3,7 @@
 
 ### `contracts` 目录
 将合约`xxx.abi`文件放到这个目录下
-* 运行`scripts/abigen_generate_go/abigen_generate_go.go` 即可自动生成合约接口文件
+* 运行`scripts/abigen_generate_go/main.go` 即可自动生成合约接口文件
 
 ### `configs` 目录
 * 自动加载`.evn` 文件到环境变量,并读取配置
@@ -14,6 +14,11 @@
   * [https://github.com/cryptoriums/flashbot/blob/main/flashbot.go#L314](https://github.com/cryptoriums/flashbot/blob/main/flashbot.go#L314)
 * `hackWallet`
   * 核心包
+
+### `examples` 目录
+* [BatchTransaction](examples/BatchTransaction/main.go)
+* [CallBundle](examples/CallBundle/main.go)
+* [Transfer](examples/Transfer/main.go)
 
 ### AnvilFork 选项
 [anvil](https://github.com/foundry-rs/foundry) 运行本地分叉节点，这样就可以创建主网的分叉环境然后模拟交易,anvil会创建10个有10000ETH的虚拟钱包地址

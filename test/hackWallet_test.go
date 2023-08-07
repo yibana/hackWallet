@@ -48,7 +48,7 @@ func TestBuildTransaction(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	transaction, err := Wallet.BuildTransaction(fromAcc, hackWallet.WETH9, depositData,
+	transaction, err := Wallet.BuildTransaction(fromAcc, &hackWallet.WETH9, depositData,
 		hackWallet.ConvertETHToBigInt(0.1), 210000, 0, big.NewInt(1e8),
 	)
 	if err != nil {
