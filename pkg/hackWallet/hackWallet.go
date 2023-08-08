@@ -3,18 +3,17 @@ package hackWallet
 import (
 	"context"
 	"crypto/ecdsa"
-	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
 	"github.com/yibana/hackWallet/pkg/flashbot"
+	"go.uber.org/zap"
 	"math/big"
+	"sync"
 	"time"
 )
-
-const DefaultGasTipCap = 1e8 //0.1 Gwei
 
 type HackWallet struct {
 	Accounts             []*Account
@@ -72,13 +71,14 @@ func (hw *HackWallet) InitFlashbot(prvKey *ecdsa.PrivateKey, additional bool) er
 		"https://api.blocknative.com/v1/auction", "https://rpc.titanbuilder.xyz", "https://rpc.nfactorial.xyz"}
 
 	var additionals []*flashbot.Api
-	for _, s := range rpcList {
-		additionals = append(additionals, &flashbot.Api{
-			URL:                s,
-			SupportsSimulation: false,
-		})
+	if additional {
+		for _, s := range rpcList {
+			additionals = append(additionals, &flashbot.Api{
+				URL:                s,
+				SupportsSimulation: false,
+			})
+		}
 	}
-
 	if len(hw.fbs) == 0 {
 		flashboters, err := flashbot.NewAll(hw.chainID.Int64(), prvKey, additionals...)
 		if err != nil {
@@ -96,6 +96,16 @@ func (hw *HackWallet) SetDefaultGasTipCap(gasTipCap int64) {
 
 func (hw *HackWallet) AddAccount(account *Account) {
 	hw.Accounts = append(hw.Accounts, account)
+}
+
+// load account
+func (hw *HackWallet) LoadAccount(privateKey string) (*Account, error) {
+	account, err := NewAccount(privateKey, hw.RPCClient)
+	if err != nil {
+		return nil, err
+	}
+	hw.AddAccount(account)
+	return account, nil
 }
 
 // add rand account
@@ -134,7 +144,13 @@ func (hw *HackWallet) GetBlockHeader(blockNumber *big.Int) (*types.Header, error
 	if err != nil {
 		return nil, err
 	}
-	DebugLog(fmt.Sprintf("GetBlockHeader finshed, blockNumber:%d, time:%d", hw.lastBlockHeader.Number.Uint64(), hw.lastBlockHeader.Time))
+	var log_fields []zap.Field
+	log_fields = append(log_fields, zap.String("blockNumber", hw.lastBlockHeader.Number.String()))
+	log_fields = append(log_fields, zap.Uint64("blockTime", hw.lastBlockHeader.Time))
+	log_fields = append(log_fields, zap.String("BaseFee", ConvertToGwei(hw.lastBlockHeader.BaseFee).String()+"(Gwei)"))
+	defer func() {
+		DebugLog("GetBlockHeader", log_fields...)
+	}()
 	return hw.lastBlockHeader, nil
 }
 
@@ -236,21 +252,36 @@ func (hw *HackWallet) SendBundle(txs []string, blockNum uint64) error {
 	}
 	ctx := context.Background()
 	var err error
-	var response *flashbot.Response
 	var succ bool
-	for _, fb := range hw.fbs {
-		response, err = fb.SendBundle(ctx, txs, blockNum)
+	if blockNum <= 0 {
+		blockNum, err = hw.GetBlockNumber()
 		if err != nil {
-			ErrLog(fmt.Sprintf("[SendBundle] blockNum:%d rpc:%s err:%s", blockNum, fb.Api().URL, err.Error()))
-		} else {
-			if response.Error.Code != 0 {
-				ErrLog(fmt.Sprintf("[SendBundle] blockNum:%d rpc:%s err:%v", blockNum, fb.Api().URL, response.Error))
-			} else {
-				InfoLog(fmt.Sprintf("[SendBundle] blockNum:%d rpc:%s result:%v", blockNum, fb.Api().URL, response.Result))
-				succ = true
-			}
+			return err
 		}
 	}
+	wait := sync.WaitGroup{}
+	for _, fb := range hw.fbs {
+		wait.Add(1)
+		go func(gofb flashbot.Flashboter) {
+			defer wait.Done()
+			response, err := gofb.SendBundle(ctx, txs, blockNum)
+			if err != nil {
+				ErrLog("SendBundle", zap.Uint64("blockNum", blockNum),
+					zap.String("rpc", gofb.Api().URL), zap.Error(err))
+			} else {
+				if response.Error.Code != 0 {
+					ErrLog("SendBundle", zap.Uint64("blockNum", blockNum),
+						zap.String("rpc", gofb.Api().URL), zap.Any("Error", response.Error))
+				} else {
+					InfoLog("SendBundle", zap.Uint64("blockNum", blockNum),
+						zap.String("rpc", gofb.Api().URL), zap.Any("Result", response.Result))
+					succ = true
+				}
+			}
+		}(fb)
+	}
+	wait.Wait()
+
 	if !succ {
 		return errors.New("send bundle failed")
 	}
@@ -272,18 +303,27 @@ func (hw *HackWallet) CallBundle(transactions []*types.Transaction, blockNumStat
 	}
 	ctx := context.Background()
 	var err error
+	var log_fields []zap.Field
 	var response *flashbot.Response
 	fb := hw.fbs[0]
+
+	log_fields = append(log_fields, zap.Uint64("blockNum", blockNumState))
+	log_fields = append(log_fields, zap.String("rpc", fb.Api().URL))
+
 	response, err = fb.CallBundle(ctx, txs, blockNumState)
 	if err != nil {
-		ErrLog(fmt.Sprintf("[CallBundle] rpc:%s err:%s", fb.Api().URL, err.Error()))
+		log_fields = append(log_fields, zap.Error(err))
+		ErrLog("CallBundle", log_fields...)
 	} else {
 		if response.Error.Code != 0 {
-			ErrLog(fmt.Sprintf("[CallBundle] rpc:%s err:%v", fb.Api().URL, response.Error))
+			log_fields = append(log_fields, zap.Any("Error", response.Error))
+			ErrLog("CallBundle", log_fields...)
 		} else {
-			InfoLog(fmt.Sprintf("[CallBundle] rpc:%s result:%v", fb.Api().URL, response.Result))
+			log_fields = append(log_fields, zap.Any("Result", response.Result))
+			InfoLog("CallBundle", log_fields...)
 		}
 	}
+	err = response.HasError()
 	return response, err
 }
 

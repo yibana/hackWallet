@@ -9,20 +9,26 @@ import (
 )
 
 func main() {
-	wallet, err := hackWallet.NewHackWallet(configs.HTTP_RPC_URL, true)
+	wallet, err := hackWallet.NewHackWallet(configs.HTTP_RPC_URL_Goeli, false)
+	if err != nil {
+		panic(err)
+	}
+
+	myacc1, err := wallet.LoadAccount(configs.MYPK1)
 	if err != nil {
 		panic(err)
 	}
 
 	gasTipCap := big.NewInt(1e8) // 设置默认小费
 	chainId := wallet.GetChainID()
+	weth := hackWallet.TokenMap[chainId.Uint64()]["WETH"]
 
-	transactions, err := wallet.BuildBatchTransaction(wallet.Accounts[0],
+	transactions, err := wallet.BuildBatchTransaction(myacc1,
 		func(from *hackWallet.Account, baseFee *big.Int, nonce uint64) (*types.Transaction, error) {
-			return from.Build_WETH_deposit(baseFee, nonce, chainId, gasTipCap, hackWallet.ConvertETHToBigInt(1.96))
+			return from.Build_WETH_deposit(baseFee, nonce, chainId, gasTipCap, hackWallet.ConvertETHToBigInt(0.00196))
 		},
 		func(from *hackWallet.Account, baseFee *big.Int, nonce uint64) (*types.Transaction, error) {
-			return from.Build_WETH_withdraw(baseFee, nonce, chainId, gasTipCap, hackWallet.ConvertETHToBigInt(0.96))
+			return from.Build_WETH_withdraw(baseFee, nonce, chainId, gasTipCap, hackWallet.ConvertETHToBigInt(0.0019))
 		},
 	)
 	if err != nil {
@@ -41,10 +47,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	fmt.Println(response)
 
-	balance, err := wallet.GetTokenBalance(wallet.Accounts[0], hackWallet.WETH9)
+	// 如果是goerli网络,因为可以打包的验证器极少,所以需要多尝试几次
+	err = wallet.SendBundleFrom(transactions, 0, 2)
+
+	if err != nil {
+		panic(err)
+	}
+
+	balance, err := wallet.GetTokenBalance(myacc1, weth.Address)
 	if err != nil {
 		panic(err)
 	}

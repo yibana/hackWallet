@@ -16,9 +16,9 @@
   * 核心包
 
 ### `examples` 目录
-* [BatchTransaction](examples/BatchTransaction/main.go) 批量执行交易
-* [CallBundle](examples/CallBundle/main.go) 打包交易(flashbot)
-* [Transfer](examples/Transfer/main.go) 发送交易
+* [BatchTransaction](examples/BatchTransaction/BatchTransaction.go) 批量执行交易
+* [CallBundle](examples/CallBundle/CallBundle.go) 打包交易(flashbot)
+* [Transfer](examples/Transfer/Transfer.go) 发送交易
 
 ### AnvilFork 选项
 [anvil](https://github.com/foundry-rs/foundry) 运行本地分叉节点，这样就可以创建主网的分叉环境然后模拟交易,anvil会创建10个有10000ETH的虚拟钱包地址

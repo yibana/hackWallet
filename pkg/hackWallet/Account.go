@@ -2,10 +2,13 @@ package hackWallet
 
 import (
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"go.uber.org/zap"
 	"math/big"
 	"strings"
 )
@@ -77,35 +80,63 @@ func (a *Account) WaitForTx(tx *types.Transaction, maxWaitSeconds uint) (*types.
 	return WaitForTx(a.ethclient, tx, maxWaitSeconds)
 }
 
+func (a *Account) Build_Pack(
+	baseFee *big.Int, nonce uint64,
+	chainID, GasTipCap *big.Int,
+	value *big.Int, to *common.Address, gasLimit uint64,
+	_abi *abi.ABI, name string, args ...interface{}) (*types.Transaction, error) {
+	var log_fields []zap.Field
+	log_fields = append(log_fields, zap.Uint64("nonce", nonce))
+	log_fields = append(log_fields, zap.Uint64("gasLimit", gasLimit))
+	log_fields = append(log_fields, zap.String("to", to.Hex()))
+	log_fields = append(log_fields, zap.String("value", value.String()))
+	log_fields = append(log_fields, zap.String("gasTipCap", GasTipCap.String()))
+	log_fields = append(log_fields, zap.String("chainID", chainID.String()))
+	log_fields = append(log_fields, zap.String("baseFee", baseFee.String()))
+	log_fields = append(log_fields, zap.String("name", name))
+	log_fields = append(log_fields, zap.Any("args", args))
+	defer func() {
+		DebugLog("Build_Pack", log_fields...)
+	}()
+	data, err := _abi.Pack(name, args...)
+	if err != nil {
+		return nil, err
+	}
+	log_fields = append(log_fields, zap.String("data", hexutil.Encode(data)))
+	GasFeeCap := big.NewInt(0).Add(baseFee, GasTipCap)
+	log_fields = append(log_fields, zap.String("gasFeeCap", GasFeeCap.String()))
+
+	transaction, err := a.BuildTransaction(to, value, data, nonce, gasLimit, chainID, GasFeeCap, GasTipCap)
+	if err != nil {
+		return nil, err
+	}
+	log_fields = append(log_fields, zap.String("transaction", transaction.Hash().Hex()))
+	return transaction, nil
+}
+
 // Build_WETH_deposit
 func (a *Account) Build_WETH_deposit(
 	baseFee *big.Int, nonce uint64,
 	chainID, GasTipCap *big.Int,
 	amount *big.Int) (*types.Transaction, error) {
-	data, err := WETHABI.Pack("deposit")
-	if err != nil {
-		return nil, err
-	}
-	GasFeeCap := big.NewInt(0).Add(baseFee, GasTipCap)
-	transaction, err := a.BuildTransaction(&WETH9, amount, data, nonce, DefaultWETHDepositGas, chainID, GasFeeCap, GasTipCap)
-	if err != nil {
-		return nil, err
-	}
-	return transaction, nil
+	weth := TokenMap[chainID.Uint64()]["WETH"]
+	return a.Build_Pack(
+		baseFee, nonce, chainID, GasTipCap,
+		amount,
+		&weth.Address, DefaultWETHDepositGas, WETH_ABI,
+		"deposit",
+	)
 }
 
 func (a *Account) Build_WETH_withdraw(
 	baseFee *big.Int, nonce uint64,
 	chainID, GasTipCap *big.Int,
 	amount *big.Int) (*types.Transaction, error) {
-	data, err := WETHABI.Pack("withdraw", amount)
-	if err != nil {
-		return nil, err
-	}
-	GasFeeCap := big.NewInt(0).Add(baseFee, GasTipCap)
-	transaction, err := a.BuildTransaction(&WETH9, big.NewInt(0), data, nonce, DefaultWETHWithdrawGas, chainID, GasFeeCap, GasTipCap)
-	if err != nil {
-		return nil, err
-	}
-	return transaction, nil
+	weth := TokenMap[chainID.Uint64()]["WETH"]
+	return a.Build_Pack(
+		baseFee, nonce, chainID, GasTipCap,
+		big.NewInt(0),
+		&weth.Address, DefaultWETHWithdrawGas, WETH_ABI,
+		"withdraw", amount,
+	)
 }

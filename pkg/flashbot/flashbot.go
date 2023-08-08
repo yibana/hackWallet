@@ -538,3 +538,21 @@ func relayURLDefault(netID int64) (string, error) {
 		return "", errors.Errorf("network id not supported id:%v", netID)
 	}
 }
+
+func (r *Response) HasError() error {
+	if r.Error.Code != 0 {
+		return errors.New(fmt.Sprintf("Error from simulate: %s\n", r.Error.Message))
+	}
+
+	if len(r.Result.Results) == 0 {
+		return errors.New(fmt.Sprintf("Invalid response from simulate: %v\n", r.Result))
+	}
+
+	for _, result := range r.Result.Results {
+		if result.Error != "" {
+			return errors.New(fmt.Sprintf("Error from simulate [%s]: %s\n", result.TxHash, result.Error))
+		}
+	}
+
+	return nil
+}

@@ -3,6 +3,7 @@ module github.com/yibana/hackWallet
 go 1.19
 
 require (
+	github.com/atotto/clipboard v0.1.4
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/joho/godotenv v1.5.1
 	github.com/natefinch/lumberjack v2.0.0+incompatible

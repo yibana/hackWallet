@@ -15,9 +15,10 @@ import (
 	"time"
 )
 
-var WETHABI, _ = WETH9Interface.WETH9InterfaceMetaData.GetAbi()
+var WETH_ABI, _ = WETH9Interface.WETH9InterfaceMetaData.GetAbi()
 
 const (
+	DefaultGasTipCap              = 1e8 //0.1 Gwei
 	DefaultWETHDepositGas  uint64 = 60000
 	DefaultWETHWithdrawGas uint64 = 50000
 )
@@ -58,7 +59,7 @@ func WaitForTx(ethclient *ethclient.Client, tx *types.Transaction, maxWaitSecond
 }
 
 func SimulationActionFrom(ethclient *ethclient.Client, from, to common.Address, value *big.Int, data []byte) (gas uint64, err error) {
-	gas, err = ethclient.EstimateGas(context.Background(), ethereum.CallMsg{
+	return ethclient.EstimateGas(context.Background(), ethereum.CallMsg{
 		From:       from,
 		To:         &to,
 		Gas:        0,
@@ -69,7 +70,6 @@ func SimulationActionFrom(ethclient *ethclient.Client, from, to common.Address, 
 		Data:       data,
 		AccessList: nil,
 	})
-	return
 }
 
 func GetTokenBalance(ethclient *ethclient.Client, from common.Address, erc20 common.Address) (*big.Int, error) {
