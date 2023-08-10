@@ -16,8 +16,8 @@ type Subscribe_alchemy_pendingTransactions_params struct {
 }
 
 // https://docs.alchemy.com/reference/alchemy-pendingtransactions
-func (hw *HackWallet) SubscribeAlchemy_Pendingtransactions(param Subscribe_alchemy_pendingTransactions_params, callback func(tx *types.Transaction)) {
-	hw.Subscribe(func(data interface{}) {
+func (hw *HackWallet) SubscribeAlchemy_Pendingtransactions(param Subscribe_alchemy_pendingTransactions_params, callback func(tx *types.Transaction)) error {
+	return hw.Subscribe(func(data interface{}) {
 		// convertToType(data, &types.Transaction)
 		var tx types.Transaction
 		marshal, _ := json.Marshal(data)
@@ -27,8 +27,8 @@ func (hw *HackWallet) SubscribeAlchemy_Pendingtransactions(param Subscribe_alche
 }
 
 // Subscribe logs
-func (hw *HackWallet) SubscribeLogs(address []string, topics []string, callback func(tx *types.Log)) {
-	hw.Subscribe(func(data interface{}) {
+func (hw *HackWallet) SubscribeLogs(address []string, topics []string, callback func(tx *types.Log)) error {
+	return hw.Subscribe(func(data interface{}) {
 		var log types.Log
 		marshal, _ := json.Marshal(data)
 		json.Unmarshal(marshal, &log)
@@ -36,29 +36,35 @@ func (hw *HackWallet) SubscribeLogs(address []string, topics []string, callback 
 	}, "eth", "logs", address, topics)
 }
 
-func (hw *HackWallet) Subscribe(callback func(data interface{}), namespace string, args ...interface{}) {
+func (hw *HackWallet) Subscribe(callback func(data interface{}), namespace string, args ...interface{}) error {
 	var channel interface{}
+	channel = make(chan interface{})
+	var err_cn int
 	for {
-		channel = make(chan interface{})
 		sub, err := hw.rpc.Subscribe(context.Background(),
 			namespace, channel, args...,
 		)
-		if err == nil {
-			isexit := false
-			for !isexit {
-				select {
-				case v := <-channel.(chan interface{}):
-					go callback(&v)
-				case err = <-sub.Err():
-					ErrLog(fmt.Sprintf("Subscribe_%s", args[0]), zap.Error(err))
-					isexit = true
-				}
+		if err != nil {
+			ErrLog(fmt.Sprintf("[%d]Subscribe_%s", err_cn, args[0]), zap.Error(err))
+			err_cn++
+			if err_cn > 5 {
+				return err
 			}
-			sub.Unsubscribe()
-		} else {
-			ErrLog(fmt.Sprintf("Subscribe_%s", args[0]), zap.Error(err))
+			time.Sleep(time.Second * 5)
+			continue
 		}
-		time.Sleep(time.Second * 5)
+		err_cn = 0
+
+		for {
+			select {
+			case v := <-channel.(chan interface{}):
+				go callback(&v)
+			case err = <-sub.Err():
+				ErrLog(fmt.Sprintf("[%d]Subscribe_%s", err_cn, args[0]), zap.Error(err))
+				break
+			}
+		}
+		sub.Unsubscribe()
 	}
 
 }
