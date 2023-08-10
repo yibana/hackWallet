@@ -16,7 +16,7 @@ func main() {
 
 	gasTipCap := big.NewInt(1e8) // 设置默认小费
 	chainId := wallet.GetChainID()
-
+	weth := hackWallet.TokenMap[chainId.Uint64()]["WETH"]
 	transactions, err := wallet.BuildBatchTransaction(wallet.Accounts[0],
 		func(from *hackWallet.Account, baseFee *big.Int, nonce uint64) (*types.Transaction, error) {
 			return from.Build_WETH_deposit(baseFee, nonce, chainId, gasTipCap, hackWallet.ConvertETHToBigInt(1.96))
@@ -35,7 +35,7 @@ func main() {
 		panic(err)
 	}
 
-	balance, err := wallet.GetTokenBalance(wallet.Accounts[0], hackWallet.WETH9)
+	balance, err := wallet.GetTokenBalance(wallet.Accounts[0], weth.Address)
 	if err != nil {
 		panic(err)
 	}

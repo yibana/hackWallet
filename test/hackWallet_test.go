@@ -2,10 +2,9 @@ package test
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/yibana/hackWallet/configs"
-	WETH9Interface "github.com/yibana/hackWallet/contracts/WETH9"
 	"github.com/yibana/hackWallet/pkg/hackWallet"
-	"math/big"
 	"testing"
 	"time"
 )
@@ -14,8 +13,8 @@ var Wallet *hackWallet.HackWallet
 
 func init() {
 	var err error
-	AnvilFork := true
-	Wallet, err = hackWallet.NewHackWallet(configs.HTTP_RPC_URL, AnvilFork)
+	AnvilFork := false
+	Wallet, err = hackWallet.NewHackWallet(configs.WSS_RPC_URL, AnvilFork)
 	if err != nil {
 		panic(err)
 	}
@@ -38,44 +37,26 @@ func TestGetBlockHeader(t *testing.T) {
 	}
 }
 
-func TestBuildTransaction(t *testing.T) {
-	abi, _ := WETH9Interface.WETH9InterfaceMetaData.GetAbi()
+func TestSubscribe_alchemy_pendingTransactions(t *testing.T) {
+	Wallet.SubscribeAlchemy_Pendingtransactions(hackWallet.Subscribe_alchemy_pendingTransactions_params{
+		ToAddress:  []string{"0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"},
+		HashesOnly: false,
+	},
+		func(tx *types.Transaction) {
+			json, err := tx.MarshalJSON()
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(string(json))
+		})
+}
 
-	fromAcc := Wallet.Accounts[0]
-
-	// pack deposit 0.1eth
-	depositData, err := abi.Pack("deposit")
-	if err != nil {
-		panic(err)
-	}
-	transaction, err := Wallet.BuildTransaction(fromAcc, &hackWallet.WETH9, depositData,
-		hackWallet.ConvertETHToBigInt(0.1), 210000, 0, big.NewInt(1e8),
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	err = fromAcc.SendTransaction(transaction)
-	if err != nil {
-		panic(err)
-	}
-
-	//check transaction
-	receipt, err := fromAcc.WaitForTx(transaction, 12*3)
-	if err != nil {
-		panic(err)
-	}
-	if receipt.Status == 0 {
-		panic("deposit failed")
-	}
-
-	fmt.Println("deposit success")
-
-	// get weth balance
-	balance, err := fromAcc.GetTokenBalance(hackWallet.WETH9)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("balance:", hackWallet.ConvertWei2Eth(balance))
-
+func TestSubscribeLogs(t *testing.T) {
+	Wallet.SubscribeLogs([]string{"0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"}, []string{}, func(tx *types.Log) {
+		json, err := tx.MarshalJSON()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(json))
+	})
 }

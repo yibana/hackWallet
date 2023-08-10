@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/yibana/hackWallet/pkg/flashbot"
 	"go.uber.org/zap"
@@ -19,6 +20,7 @@ type HackWallet struct {
 	Accounts             []*Account
 	ProviderURL          string
 	RPCClient            *ethclient.Client
+	rpc                  *rpc.Client
 	lastBlockHeader      *types.Header
 	lastBlockHeader_time uint64
 	chainID              *big.Int
@@ -52,13 +54,14 @@ func NewHackWallet(rpcUrl string, AnvilFork bool) (*HackWallet, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	rpc, _ := rpc.Dial(rpcUrl)
 	return &HackWallet{
 		Accounts:         accounts,
 		RPCClient:        client,
 		ProviderURL:      rpcUrl,
 		chainID:          chainID,
 		defaultGasTipCap: big.NewInt(DefaultGasTipCap),
+		rpc:              rpc,
 	}, nil
 }
 

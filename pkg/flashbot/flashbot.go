@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"net/http/httputil"
 	"time"
@@ -555,4 +556,25 @@ func (r *Response) HasError() error {
 	}
 
 	return nil
+}
+
+func (r *Response) EffectiveGasPrice() (*big.Int, error) {
+
+	tg := r.TotalGasUsed()
+
+	gp, ok := new(big.Int).SetString(r.Result.CoinbaseDiff, 10)
+	if !ok {
+		return nil, errors.New("Invalid value returned for CoinbaseDiff")
+	}
+
+	wei := new(big.Int).Div(gp, tg)
+	return wei, nil
+}
+
+func (r *Response) TotalGasUsed() *big.Int {
+	var TotalGasUsed *big.Int
+	for _, result := range r.Results {
+		TotalGasUsed = TotalGasUsed.Add(TotalGasUsed, big.NewInt(int64(result.GasUsed)))
+	}
+	return TotalGasUsed
 }
