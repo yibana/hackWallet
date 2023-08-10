@@ -2,8 +2,8 @@
 模拟以太坊钱包(无界面),方便科学家开发套利程序
 
 ### `contracts` 目录
-将合约`xxx.abi`文件放到这个目录下
-* 运行`scripts/abigen_generate_go/main.go` 即可自动生成合约接口文件
+将合约`xxx.abi`文件放到这个目录下的`abis`子目录
+* 运行`scripts/abigen/abigen_generate_go.go` 即可自动生成合约接口文件
 
 ### `configs` 目录
 * 自动加载`.evn` 文件到环境变量,并读取配置

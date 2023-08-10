@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -12,9 +13,10 @@ import (
 func main() {
 	// 设置contracts目录的路径
 	contractsDir := "./contracts"
+	abisDir := path.Join(contractsDir, "/abis")
 
 	// 遍历contracts目录中的所有abi文件
-	files, err := ioutil.ReadDir(contractsDir)
+	files, err := ioutil.ReadDir(abisDir)
 	if err != nil {
 		fmt.Println("无法读取contracts目录：", err)
 		return
@@ -38,7 +40,7 @@ func main() {
 
 				abigen_type := fmt.Sprintf("%sInterface", strings.Title(filename))
 				// 使用abigen生成Go文件到目录中
-				cmd := exec.Command("abigen", "--abi", filepath.Join(contractsDir, file.Name()), "--pkg", abigen_type, "--type", abigen_type, "--out", filepath.Join(dirPath, abigen_type+".go"))
+				cmd := exec.Command("abigen", "--abi", filepath.Join(abisDir, file.Name()), "--pkg", abigen_type, "--type", abigen_type, "--out", filepath.Join(dirPath, abigen_type+".go"))
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				err = cmd.Run()
