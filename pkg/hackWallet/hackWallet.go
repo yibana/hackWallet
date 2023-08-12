@@ -39,12 +39,11 @@ func NewHackWallet(rpcUrl string, AnvilFork bool) (*HackWallet, error) {
 		}
 		rpcUrl = "http://127.0.0.1:8545"
 	}
-
-	client, err := ethclient.Dial(rpcUrl)
+	rpc, err := rpc.Dial(rpcUrl)
 	if err != nil {
 		return nil, err
 	}
-
+	client := ethclient.NewClient(rpc)
 	for _, privateKey := range privateKeys {
 		if acc, err := NewAccount(privateKey, client); err == nil {
 			accounts = append(accounts, acc)
@@ -54,7 +53,7 @@ func NewHackWallet(rpcUrl string, AnvilFork bool) (*HackWallet, error) {
 	if err != nil {
 		return nil, err
 	}
-	rpc, _ := rpc.Dial(rpcUrl)
+
 	return &HackWallet{
 		Accounts:         accounts,
 		RPCClient:        client,

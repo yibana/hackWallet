@@ -1,7 +1,7 @@
 package hackWallet
 
 import (
-	"github.com/yibana/hackWallet/configs"
+	"github.com/yibana/hackWallet/internal/configs"
 )
 
 var ErrLog = configs.LOGGER.Error

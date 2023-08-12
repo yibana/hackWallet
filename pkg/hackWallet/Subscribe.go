@@ -26,6 +26,29 @@ func (hw *HackWallet) SubscribeAlchemy_Pendingtransactions(param Subscribe_alche
 	}, "eth", "alchemy_pendingTransactions", param)
 }
 
+// Subscribe newHeads
+func (hw *HackWallet) SubscribeHeader(callback func(header *types.Header)) error {
+	return hw.Subscribe(func(data interface{}) {
+		var header types.Header
+		marshal, err := json.Marshal(data)
+		if err != nil {
+			ErrLog("SubscribeHeader", zap.Error(err))
+			return
+		}
+		err = json.Unmarshal(marshal, &header)
+		if err != nil {
+			ErrLog("SubscribeHeader", zap.Error(err))
+			return
+		}
+		if hw.lastBlockHeader == nil || header.Number.Cmp(hw.lastBlockHeader.Number) > 0 {
+			hw.lastBlockHeader = &header
+			hw.lastBlockHeader_time = uint64(time.Now().Unix())
+		}
+
+		go callback(&header)
+	}, "eth", "newHeads")
+}
+
 // Subscribe logs
 func (hw *HackWallet) SubscribeLogs(address []string, topics []string, callback func(tx *types.Log)) error {
 	return hw.Subscribe(func(data interface{}) {

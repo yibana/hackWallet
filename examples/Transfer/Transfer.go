@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/yibana/hackWallet/configs"
+	"github.com/yibana/hackWallet/internal/configs"
 	"github.com/yibana/hackWallet/pkg/hackWallet"
 )
 

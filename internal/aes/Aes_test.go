@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/atotto/clipboard"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/yibana/hackWallet/configs"
+	"github.com/yibana/hackWallet/internal/configs"
 	"log"
 	"os"
 	"strings"

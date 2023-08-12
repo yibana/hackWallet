@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/yibana/hackWallet/configs"
+	"github.com/yibana/hackWallet/internal/configs"
 	"github.com/yibana/hackWallet/pkg/hackWallet"
 	"math/big"
 )

@@ -3,7 +3,7 @@ package test
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/yibana/hackWallet/configs"
+	"github.com/yibana/hackWallet/internal/configs"
 	"github.com/yibana/hackWallet/pkg/hackWallet"
 	"testing"
 	"time"
@@ -54,6 +54,16 @@ func TestSubscribe_alchemy_pendingTransactions(t *testing.T) {
 func TestSubscribeLogs(t *testing.T) {
 	Wallet.SubscribeLogs([]string{"0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"}, []string{}, func(tx *types.Log) {
 		json, err := tx.MarshalJSON()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(json))
+	})
+}
+
+func TestSubscribe_alchemy_newBlocks(t *testing.T) {
+	Wallet.SubscribeHeader(func(header *types.Header) {
+		json, err := header.MarshalJSON()
 		if err != nil {
 			panic(err)
 		}
