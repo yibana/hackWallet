@@ -78,15 +78,18 @@ func (hw *HackWallet) Subscribe(callback func(data interface{}), namespace strin
 		}
 		err_cn = 0
 
-		for {
-			select {
-			case v := <-channel.(chan interface{}):
-				go callback(&v)
-			case err = <-sub.Err():
-				ErrLog(fmt.Sprintf("[%d]Subscribe_%s", err_cn, args[0]), zap.Error(err))
-				break
+		loop := func() {
+			for {
+				select {
+				case v := <-channel.(chan interface{}):
+					go callback(&v)
+				case err = <-sub.Err():
+					ErrLog(fmt.Sprintf("[%d]Subscribe_%s", err_cn, args[0]), zap.Error(err))
+					return
+				}
 			}
 		}
+		loop()
 		sub.Unsubscribe()
 	}
 
