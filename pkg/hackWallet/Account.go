@@ -79,7 +79,33 @@ func (a *Account) GetTokenBalance(erc20 common.Address) (*big.Int, error) {
 func (a *Account) WaitForTx(tx *types.Transaction, maxWaitSeconds uint) (*types.Receipt, error) {
 	return WaitForTx(a.ethclient, tx, maxWaitSeconds)
 }
+func (a *Account) Build_Pack_Data(
+	baseFee *big.Int, nonce uint64,
+	chainID, GasTipCap *big.Int,
+	value *big.Int, to *common.Address, gasLimit uint64,
+	data []byte) (*types.Transaction, error) {
+	var log_fields []zap.Field
+	log_fields = append(log_fields, zap.Uint64("nonce", nonce))
+	log_fields = append(log_fields, zap.Uint64("gasLimit", gasLimit))
+	log_fields = append(log_fields, zap.String("to", to.Hex()))
+	log_fields = append(log_fields, zap.String("value", value.String()))
+	log_fields = append(log_fields, zap.String("gasTipCap", GasTipCap.String()))
+	log_fields = append(log_fields, zap.String("chainID", chainID.String()))
+	log_fields = append(log_fields, zap.String("baseFee", baseFee.String()))
+	defer func() {
+		DebugLog("Build_Pack_Data", log_fields...)
+	}()
+	log_fields = append(log_fields, zap.String("data", hexutil.Encode(data)))
+	GasFeeCap := big.NewInt(0).Add(baseFee, GasTipCap)
+	log_fields = append(log_fields, zap.String("gasFeeCap", GasFeeCap.String()))
 
+	transaction, err := a.BuildTransaction(to, value, data, nonce, gasLimit, chainID, GasFeeCap, GasTipCap)
+	if err != nil {
+		return nil, err
+	}
+	log_fields = append(log_fields, zap.String("transaction", transaction.Hash().Hex()))
+	return transaction, nil
+}
 func (a *Account) Build_Pack(
 	baseFee *big.Int, nonce uint64,
 	chainID, GasTipCap *big.Int,
