@@ -10,17 +10,21 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	ERC20Interface "github.com/yibana/hackWallet/contracts/ERC20"
+	ERC721Interface "github.com/yibana/hackWallet/contracts/ERC721"
 	WETH9Interface "github.com/yibana/hackWallet/contracts/WETH9"
 	"math/big"
 	"time"
 )
 
 var WETH_ABI, _ = WETH9Interface.WETH9InterfaceMetaData.GetAbi()
+var ERC20_ABI, _ = ERC20Interface.ERC20InterfaceMetaData.GetAbi()
+var ERC721_ABI, _ = ERC721Interface.ERC721InterfaceMetaData.GetAbi()
 
 const (
-	DefaultGasTipCap              = 1e8 //0.1 Gwei
-	DefaultWETHDepositGas  uint64 = 60000
-	DefaultWETHWithdrawGas uint64 = 50000
+	DefaultGasTipCap               = 1e8 //0.1 Gwei
+	DefaultWETHDepositGas   uint64 = 60000
+	DefaultWETHWithdrawGas  uint64 = 50000
+	DefaultERC721ApproveGas uint64 = 60000
 )
 
 // WaitForTx

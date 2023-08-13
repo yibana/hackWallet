@@ -166,3 +166,16 @@ func (a *Account) Build_WETH_withdraw(
 		"withdraw", amount,
 	)
 }
+
+// IERC721.approve
+func (a *Account) Build_ERC721_approve(
+	baseFee *big.Int, nonce uint64,
+	chainID, GasTipCap *big.Int,
+	nftaddr, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return a.Build_Pack(
+		baseFee, nonce, chainID, GasTipCap,
+		big.NewInt(0),
+		&nftaddr, DefaultERC721ApproveGas, ERC721_ABI,
+		"approve", to, tokenId,
+	)
+}
