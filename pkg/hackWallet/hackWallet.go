@@ -316,6 +316,7 @@ func (hw *HackWallet) CallBundle(transactions []*types.Transaction, blockNumStat
 	if err != nil {
 		log_fields = append(log_fields, zap.Error(err))
 		ErrLog("CallBundle", log_fields...)
+		return nil, err
 	} else {
 		if response.Error.Code != 0 {
 			log_fields = append(log_fields, zap.Any("Error", response.Error))
