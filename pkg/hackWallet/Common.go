@@ -24,7 +24,7 @@ const (
 	DefaultGasTipCap               = 1e8 //0.1 Gwei
 	DefaultWETHDepositGas   uint64 = 60000
 	DefaultWETHWithdrawGas  uint64 = 50000
-	DefaultERC721ApproveGas uint64 = 60000
+	DefaultERC721ApproveGas uint64 = 100000
 )
 
 // WaitForTx

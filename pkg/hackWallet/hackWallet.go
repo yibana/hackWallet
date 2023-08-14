@@ -180,6 +180,7 @@ func (hw *HackWallet) SelectAccount(address common.Address) (*Account, error) {
 }
 
 type BuildBack func(from *Account, baseFee *big.Int, nonce uint64) (*types.Transaction, error)
+type BuildTxnBack func(txb *TxBaseBuild) (*types.Transaction, error)
 
 // BuildBatchTransaction
 func (hw *HackWallet) BuildBatchTransaction(fromAcc *Account, bc ...BuildBack) ([]*types.Transaction, error) {
@@ -197,7 +198,38 @@ func (hw *HackWallet) BuildBatchTransaction(fromAcc *Account, bc ...BuildBack) (
 		return nil, err
 	}
 	for _, b := range bc {
-		transaction, err := b(fromAcc, baseFee, nonce)
+		transaction, err := b(fromAcc, big.NewInt(0).Set(baseFee), nonce)
+		if err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, transaction)
+		nonce++
+	}
+	return transactions, nil
+}
+
+func (hw *HackWallet) BuildBatchTxn(fromAcc *Account, gasTipCap *big.Int, bc ...BuildTxnBack) ([]*types.Transaction, error) {
+	var transactions []*types.Transaction
+	var err error
+	var nonce uint64
+	var baseFee *big.Int
+	chain := hw.chainID
+	baseFee, err = hw.GetNextBlockBaseFee()
+	if err != nil {
+		return nil, err
+	}
+	nonce, err = fromAcc.ethclient.PendingNonceAt(context.Background(), *fromAcc.Address)
+	if err != nil {
+		return nil, err
+	}
+	for _, b := range bc {
+		transaction, err := b(&TxBaseBuild{
+			From:      fromAcc,
+			BaseFee:   big.NewInt(0).Set(baseFee),
+			Nonce:     nonce,
+			ChainID:   chain,
+			GasTipCap: big.NewInt(0).Set(gasTipCap),
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -330,7 +362,7 @@ func (hw *HackWallet) CallBundle(transactions []*types.Transaction, blockNumStat
 	return response, err
 }
 
-// BuildTransaction from,to,value,gas,gasPrice,nonce
+// BuildTransaction From,to,value,gas,gasPrice,nonce
 func (hw *HackWallet) BuildTransaction(
 	fromAcc *Account, to *common.Address, data []byte,
 	value *big.Int, gasLimit, nonce uint64,

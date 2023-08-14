@@ -23,12 +23,12 @@ func main() {
 	chainId := wallet.GetChainID()
 	weth := hackWallet.TokenMap[chainId.Uint64()]["WETH"]
 
-	transactions, err := wallet.BuildBatchTransaction(myacc1,
-		func(from *hackWallet.Account, baseFee *big.Int, nonce uint64) (*types.Transaction, error) {
-			return from.Build_WETH_deposit(baseFee, nonce, chainId, gasTipCap, hackWallet.ConvertETHToBigInt(0.00196))
+	transactions, err := wallet.BuildBatchTxn(myacc1, gasTipCap,
+		func(txp *hackWallet.TxBaseBuild) (*types.Transaction, error) {
+			return txp.WethDeposit(hackWallet.ConvertETHToBigInt(0.00196))
 		},
-		func(from *hackWallet.Account, baseFee *big.Int, nonce uint64) (*types.Transaction, error) {
-			return from.Build_WETH_withdraw(baseFee, nonce, chainId, gasTipCap, hackWallet.ConvertETHToBigInt(0.0019))
+		func(txp *hackWallet.TxBaseBuild) (*types.Transaction, error) {
+			return txp.WethWithdraw(hackWallet.ConvertETHToBigInt(0.0019))
 		},
 	)
 	if err != nil {

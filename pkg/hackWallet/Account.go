@@ -106,6 +106,7 @@ func (a *Account) Build_Pack_Data(
 	log_fields = append(log_fields, zap.String("transaction", transaction.Hash().Hex()))
 	return transaction, nil
 }
+
 func (a *Account) Build_Pack(
 	baseFee *big.Int, nonce uint64,
 	chainID, GasTipCap *big.Int,
