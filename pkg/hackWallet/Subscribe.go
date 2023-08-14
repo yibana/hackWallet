@@ -16,8 +16,8 @@ type Subscribe_alchemy_pendingTransactions_params struct {
 }
 
 // https://docs.alchemy.com/reference/alchemy-pendingtransactions
-func (hw *HackWallet) SubscribeAlchemy_Pendingtransactions(param Subscribe_alchemy_pendingTransactions_params, callback func(tx *types.Transaction)) error {
-	return hw.Subscribe(func(data interface{}) {
+func (hw *HackWallet) SubscribeAlchemy_Pendingtransactions(ctx context.Context, param Subscribe_alchemy_pendingTransactions_params, callback func(tx *types.Transaction)) error {
+	return hw.Subscribe(ctx, func(data interface{}) {
 		// convertToType(data, &types.Transaction)
 		var tx types.Transaction
 		marshal, _ := json.Marshal(data)
@@ -27,8 +27,8 @@ func (hw *HackWallet) SubscribeAlchemy_Pendingtransactions(param Subscribe_alche
 }
 
 // Subscribe newHeads
-func (hw *HackWallet) SubscribeHeader(callback func(header *types.Header)) error {
-	return hw.Subscribe(func(data interface{}) {
+func (hw *HackWallet) SubscribeHeader(ctx context.Context, callback func(header *types.Header)) error {
+	return hw.Subscribe(ctx, func(data interface{}) {
 		var header types.Header
 		marshal, err := json.Marshal(data)
 		if err != nil {
@@ -50,8 +50,8 @@ func (hw *HackWallet) SubscribeHeader(callback func(header *types.Header)) error
 }
 
 // Subscribe logs
-func (hw *HackWallet) SubscribeLogs(address []string, topics []string, callback func(tx *types.Log)) error {
-	return hw.Subscribe(func(data interface{}) {
+func (hw *HackWallet) SubscribeLogs(ctx context.Context, address []string, topics []string, callback func(tx *types.Log)) error {
+	return hw.Subscribe(ctx, func(data interface{}) {
 		var log types.Log
 		marshal, _ := json.Marshal(data)
 		json.Unmarshal(marshal, &log)
@@ -59,12 +59,16 @@ func (hw *HackWallet) SubscribeLogs(address []string, topics []string, callback 
 	}, "eth", "logs", address, topics)
 }
 
-func (hw *HackWallet) Subscribe(callback func(data interface{}), namespace string, args ...interface{}) error {
+func (hw *HackWallet) Subscribe(ctx context.Context, callback func(data interface{}), namespace string, args ...interface{}) error {
 	var channel interface{}
 	channel = make(chan interface{})
 	var err_cn int
-	for {
-		sub, err := hw.rpc.Subscribe(context.Background(),
+	var ctxDone bool
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	for !ctxDone {
+		sub, err := hw.rpc.Subscribe(ctx,
 			namespace, channel, args...,
 		)
 		if err != nil {
@@ -86,11 +90,15 @@ func (hw *HackWallet) Subscribe(callback func(data interface{}), namespace strin
 				case err = <-sub.Err():
 					ErrLog(fmt.Sprintf("[%d]Subscribe_%s", err_cn, args[0]), zap.Error(err))
 					return
+				case <-ctx.Done():
+					ctxDone = true
+					return
 				}
 			}
 		}
 		loop()
 		sub.Unsubscribe()
-	}
 
+	}
+	return nil
 }

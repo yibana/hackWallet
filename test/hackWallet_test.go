@@ -42,7 +42,13 @@ func TestGetBlockHeader(t *testing.T) {
 }
 
 func TestSubscribe_alchemy_pendingTransactions(t *testing.T) {
-	Wallet.SubscribeAlchemy_Pendingtransactions(hackWallet.Subscribe_alchemy_pendingTransactions_params{
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(time.Second * 10)
+		fmt.Println("cancel")
+		cancelFunc()
+	}()
+	Wallet.SubscribeAlchemy_Pendingtransactions(ctx, hackWallet.Subscribe_alchemy_pendingTransactions_params{
 		ToAddress:  []string{"0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"},
 		HashesOnly: false,
 	},
@@ -53,10 +59,13 @@ func TestSubscribe_alchemy_pendingTransactions(t *testing.T) {
 			}
 			fmt.Println(string(json))
 		})
+
+	t.Log("end")
+
 }
 
 func TestSubscribeLogs(t *testing.T) {
-	Wallet.SubscribeLogs([]string{"0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"}, []string{}, func(tx *types.Log) {
+	Wallet.SubscribeLogs(nil, []string{"0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"}, []string{}, func(tx *types.Log) {
 		json, err := tx.MarshalJSON()
 		if err != nil {
 			panic(err)
@@ -66,7 +75,7 @@ func TestSubscribeLogs(t *testing.T) {
 }
 
 func TestSubscribe_alchemy_newBlocks(t *testing.T) {
-	Wallet.SubscribeHeader(func(header *types.Header) {
+	Wallet.SubscribeHeader(nil, func(header *types.Header) {
 		json, err := header.MarshalJSON()
 		if err != nil {
 			panic(err)
