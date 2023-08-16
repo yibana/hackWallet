@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -452,9 +451,10 @@ func (self *Flashbot) req(ctx context.Context, method string, params ...interfac
 	}
 
 	mevHTTPClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Timeout: time.Second * 3,
+		//Transport: &http.Transport{
+		//	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		//},
 	}
 	resp, err := mevHTTPClient.Do(req)
 	if err != nil {

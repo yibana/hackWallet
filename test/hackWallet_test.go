@@ -95,7 +95,7 @@ func TestSubscribe_log1(t *testing.T) {
 	//bytes, _ := ioutil.ReadFile("address_list")
 	//json.Unmarshal(bytes, &address_list)
 
-	address_list = append(address_list, common.HexToAddress("0x7c0BA1f5CF601834f084b23e7DC3f75e9695a2Dd"))
+	address_list = append(address_list, common.HexToAddress("0x08cf2C23CE70f566E97A4002F75F74C813Bc88Ad"))
 
 	logs, err := Wallet.RPCClient.FilterLogs(context.Background(),
 		ethereum.FilterQuery{
