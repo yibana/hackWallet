@@ -208,19 +208,20 @@ func (hw *HackWallet) BuildBatchTransaction(fromAcc *Account, bc ...BuildBack) (
 	return transactions, nil
 }
 
-func (hw *HackWallet) BuildBatchTxn(fromAcc *Account, gasTipCap *big.Int, bc ...BuildTxnBack) ([]*types.Transaction, error) {
+func (hw *HackWallet) BuildBatchTxn(fromAcc *Account, gasTipCap *big.Int, nonce uint64, bc ...BuildTxnBack) ([]*types.Transaction, error) {
 	var transactions []*types.Transaction
 	var err error
-	var nonce uint64
 	var baseFee *big.Int
 	chain := hw.chainID
 	baseFee, err = hw.GetNextBlockBaseFee()
 	if err != nil {
 		return nil, err
 	}
-	nonce, err = fromAcc.ethclient.PendingNonceAt(context.Background(), *fromAcc.Address)
-	if err != nil {
-		return nil, err
+	if nonce == 0 {
+		nonce, err = fromAcc.ethclient.PendingNonceAt(context.Background(), *fromAcc.Address)
+		if err != nil {
+			return nil, err
+		}
 	}
 	for _, b := range bc {
 		transaction, err := b(&TxBaseBuild{

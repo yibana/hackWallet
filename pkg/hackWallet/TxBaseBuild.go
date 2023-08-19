@@ -23,6 +23,14 @@ func (txb *TxBaseBuild) Erc721Approve(
 	)
 }
 
+func (txb *TxBaseBuild) Erc721setApprovalForAll(
+	nftaddr, to common.Address, approved bool) (*types.Transaction, error) {
+	return txb.From.Build_ERC721_setApprovalForAll(
+		txb.BaseFee, txb.Nonce, txb.ChainID, txb.GasTipCap,
+		nftaddr, to, approved,
+	)
+}
+
 func (txb *TxBaseBuild) WethWithdraw(
 	amount *big.Int) (*types.Transaction, error) {
 	return txb.From.Build_WETH_withdraw(

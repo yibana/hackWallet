@@ -25,7 +25,7 @@ func main() {
 	weth := hackWallet.TokenMap[chainId.Uint64()]["WETH"]
 	number, _ := wallet.GetBlockNumber()
 	fmt.Println(number)
-	transactions, err := wallet.BuildBatchTxn(myacc1, gasTipCap,
+	transactions, err := wallet.BuildBatchTxn(myacc1, gasTipCap, 0,
 		func(txp *hackWallet.TxBaseBuild) (*types.Transaction, error) {
 			return txp.WethDeposit(hackWallet.ConvertETHToBigInt(0.00196))
 		},

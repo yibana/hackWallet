@@ -180,3 +180,16 @@ func (a *Account) Build_ERC721_approve(
 		"approve", to, tokenId,
 	)
 }
+
+// IERC721.setApprovalForAll
+func (a *Account) Build_ERC721_setApprovalForAll(
+	baseFee *big.Int, nonce uint64,
+	chainID, GasTipCap *big.Int,
+	nftaddr, to common.Address, approved bool) (*types.Transaction, error) {
+	return a.Build_Pack(
+		baseFee, nonce, chainID, GasTipCap,
+		big.NewInt(0),
+		&nftaddr, DefaultERC721ApproveGas, ERC721_ABI,
+		"setApprovalForAll", to, approved,
+	)
+}
