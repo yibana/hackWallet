@@ -572,9 +572,15 @@ func (r *Response) EffectiveGasPrice() (*big.Int, error) {
 }
 
 func (r *Response) TotalGasUsed() *big.Int {
-	var TotalGasUsed *big.Int
+	var TotalGasUsed = new(big.Int)
 	for _, result := range r.Results {
 		TotalGasUsed = TotalGasUsed.Add(TotalGasUsed, big.NewInt(int64(result.GasUsed)))
 	}
 	return TotalGasUsed
+}
+
+// 计算交易手续费
+func (r *Response) CalcTxnFee(baseFee *big.Int) *big.Int {
+	tg := r.TotalGasUsed()
+	return new(big.Int).Mul(tg, baseFee)
 }

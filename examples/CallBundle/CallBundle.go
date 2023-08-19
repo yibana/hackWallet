@@ -23,7 +23,8 @@ func main() {
 	gasTipCap := big.NewInt(1e8) // 设置默认小费
 	chainId := wallet.GetChainID()
 	weth := hackWallet.TokenMap[chainId.Uint64()]["WETH"]
-
+	number, _ := wallet.GetBlockNumber()
+	fmt.Println(number)
 	transactions, err := wallet.BuildBatchTxn(myacc1, gasTipCap,
 		func(txp *hackWallet.TxBaseBuild) (*types.Transaction, error) {
 			return txp.WethDeposit(hackWallet.ConvertETHToBigInt(0.00196))
@@ -50,6 +51,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(transactions[0].GasFeeCap().String())
+	fmt.Println(response.TotalGasUsed())
+	fmt.Println(response.EffectiveGasPrice())
+	fmt.Println(hackWallet.ConvertWei2Eth(response.CalcTxnFee(transactions[0].GasFeeCap())))
 	fmt.Println(response)
 
 	// 如果是goerli网络,因为可以打包的验证器极少,所以需要多尝试几次
