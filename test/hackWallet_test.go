@@ -65,7 +65,21 @@ func TestSubscribe_alchemy_pendingTransactions(t *testing.T) {
 }
 
 func TestSubscribeLogs(t *testing.T) {
-	Wallet.SubscribeLogs(nil, []string{"0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"}, []string{}, func(tx *types.Log) {
+	param := hackWallet.SubscribeLogsParams{
+		Topics: [][]string{
+			{
+				//"0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c",
+				"0x783cca1c0412dd0d695e784568c96da2e9c22ff989357a2e8b1d9b2b4e6b7118",
+				"0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9",
+			},
+		},
+		Address: []string{
+			//"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+			"0x1F98431c8aD98523631AE4a59f267346ea31F984",
+			"0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
+		},
+	}
+	Wallet.SubscribeLogs(nil, param, func(tx *types.Log) {
 		json, err := tx.MarshalJSON()
 		if err != nil {
 			panic(err)

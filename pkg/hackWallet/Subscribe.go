@@ -49,14 +49,20 @@ func (hw *HackWallet) SubscribeHeader(ctx context.Context, callback func(header 
 	}, "eth", "newHeads")
 }
 
+type SubscribeLogsParams struct {
+	Address []string   `json:"address,omitempty"`
+	Topics  [][]string `json:"topics,omitempty"`
+}
+
 // Subscribe logs
-func (hw *HackWallet) SubscribeLogs(ctx context.Context, address []string, topics []string, callback func(tx *types.Log)) error {
+func (hw *HackWallet) SubscribeLogs(ctx context.Context, params SubscribeLogsParams, callback func(tx *types.Log)) error {
+
 	return hw.Subscribe(ctx, func(data interface{}) {
 		var log types.Log
 		marshal, _ := json.Marshal(data)
 		json.Unmarshal(marshal, &log)
 		go callback(&log)
-	}, "eth", "logs", address, topics)
+	}, "eth", "logs", params)
 }
 
 func (hw *HackWallet) Subscribe(ctx context.Context, callback func(data interface{}), namespace string, args ...interface{}) error {
