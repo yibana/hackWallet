@@ -64,6 +64,12 @@ func TestSubscribe_alchemy_pendingTransactions(t *testing.T) {
 
 }
 
+func TestSubscribePendingTransactions(t *testing.T) {
+	Wallet.SubscribePendingTransactions(nil, func(txHash common.Hash) {
+		t.Log(txHash.String())
+	})
+}
+
 func TestSubscribeLogs(t *testing.T) {
 	param := hackWallet.SubscribeLogsParams{
 		Topics: [][]string{

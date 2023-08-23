@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
 	"time"
@@ -24,6 +25,16 @@ func (hw *HackWallet) SubscribeAlchemy_Pendingtransactions(ctx context.Context, 
 		json.Unmarshal(marshal, &tx)
 		go callback(&tx)
 	}, "eth", "alchemy_pendingTransactions", param)
+}
+
+func (hw *HackWallet) SubscribePendingTransactions(ctx context.Context, callback func(txHash common.Hash)) error {
+	return hw.Subscribe(ctx, func(data interface{}) {
+		// convertToType(data, &types.Transaction)
+		var txHash common.Hash
+		marshal, _ := json.Marshal(data)
+		json.Unmarshal(marshal, &txHash)
+		go callback(txHash)
+	}, "eth", "newPendingTransactions")
 }
 
 // Subscribe newHeads
